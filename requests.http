@@ -1,0 +1,139 @@
+### Wallet API — Test Requests
+### Requires the "REST Client" VS Code extension (humao.rest-client)
+### Run each block with the "Send Request" button that appears above it.
+
+@baseUrl = http://localhost:8080/api/v1
+
+# ─────────────────────────────────────────────
+# 1. Create Wallet (Alice)
+# ─────────────────────────────────────────────
+### Expected: 201 Created, walletId in response (save this as walletA)
+POST {{baseUrl}}/wallets
+Content-Type: application/json
+
+{
+  "name": "Alice",
+  "email": "alice@example.com"
+}
+
+###
+
+# ─────────────────────────────────────────────
+# 2. Create Wallet (Bob)
+# ─────────────────────────────────────────────
+### Expected: 201 Created (save walletId as walletB)
+POST {{baseUrl}}/wallets
+Content-Type: application/json
+
+{
+  "name": "Bob",
+  "email": "bob@example.com"
+}
+
+###
+
+# ─────────────────────────────────────────────
+# 3. Deposit into Alice's Wallet
+# ─────────────────────────────────────────────
+### Replace 1 with Alice's actual walletId
+### Expected: 200 OK, balance = 1000.0000
+POST {{baseUrl}}/wallets/1/deposit
+Content-Type: application/json
+
+{
+  "amount": 1000.00
+}
+
+###
+
+# ─────────────────────────────────────────────
+# 4. Transfer from Alice to Bob
+# ─────────────────────────────────────────────
+### Replace fromWalletId and toWalletId with actual values
+### Expected: 200 OK, type = "TRANSFER"
+POST {{baseUrl}}/transfers
+Content-Type: application/json
+
+{
+  "fromWalletId": 1,
+  "toWalletId": 2,
+  "amount": 250.00
+}
+
+###
+
+# ─────────────────────────────────────────────
+# 5. Get Balance — Alice
+# ─────────────────────────────────────────────
+### Expected: 200 OK, balance = 750.0000
+GET {{baseUrl}}/wallets/1/balance
+
+###
+
+# ─────────────────────────────────────────────
+# 6. Get Balance — Bob
+# ─────────────────────────────────────────────
+### Expected: 200 OK, balance = 250.0000
+GET {{baseUrl}}/wallets/2/balance
+
+###
+
+# ─────────────────────────────────────────────
+# 7. Transaction History — Alice
+# ─────────────────────────────────────────────
+### Expected: 200 OK, array with DEPOSIT + TRANSFER entries
+GET {{baseUrl}}/wallets/1/transactions
+
+###
+
+# ─────────────────────────────────────────────
+# Error Cases — verify your exception handler works
+# ─────────────────────────────────────────────
+
+### 404 — wallet doesn't exist
+GET {{baseUrl}}/wallets/9999/balance
+
+###
+
+### 422 — insufficient funds (transfer more than balance)
+POST {{baseUrl}}/transfers
+Content-Type: application/json
+
+{
+  "fromWalletId": 1,
+  "toWalletId": 2,
+  "amount": 999999.00
+}
+
+###
+
+### 400 — same wallet transfer
+POST {{baseUrl}}/transfers
+Content-Type: application/json
+
+{
+  "fromWalletId": 1,
+  "toWalletId": 1,
+  "amount": 100.00
+}
+
+###
+
+### 400 — validation error (negative amount)
+POST {{baseUrl}}/wallets/1/deposit
+Content-Type: application/json
+
+{
+  "amount": -50.00
+}
+
+###
+
+### 400 — validation error (invalid email)
+POST {{baseUrl}}/wallets
+Content-Type: application/json
+
+{
+  "name": "Charlie",
+  "email": "not-an-email"
+}

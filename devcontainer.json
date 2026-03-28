@@ -1,0 +1,29 @@
+{
+  "name": "Wallet API - Java 17",
+  "image": "mcr.microsoft.com/devcontainers/java:17",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17",
+      "installMaven": "true",
+      "installGradle": "false"
+    }
+  },
+  "forwardPorts": [8080, 3306],
+  "postCreateCommand": "mvn dependency:resolve -f wallet-api/pom.xml",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vmware.vscode-spring-boot",
+        "vscjava.vscode-java-pack",
+        "vscjava.vscode-spring-initializr",
+        "humao.rest-client"
+      ],
+      "settings": {
+        "java.configuration.runtimes": [
+          { "name": "JavaSE-17", "default": true }
+        ]
+      }
+    }
+  }
+}
