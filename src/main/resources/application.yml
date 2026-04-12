@@ -1,0 +1,38 @@
+spring:
+  datasource:
+    # ${MYSQL_HOST:localhost} means: use env var MYSQL_HOST if set, else fall back to localhost.
+    # When running via mvn spring-boot:run → localhost (your machine).
+    # When running inside Docker Compose → "mysql" (the service name in docker-compose.yml).
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/walletdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: walletuser
+    password: walletpass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # ✅ STEP 4: Redis configuration
+  data:
+    redis:
+      # Same pattern — localhost for local dev, "redis" when inside Docker Compose.
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000   # Cache entries expire after 5 minutes (300,000 ms)
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.wallet.api: DEBUG
+    org.hibernate.SQL: DEBUG
