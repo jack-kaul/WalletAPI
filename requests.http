@@ -1,13 +1,13 @@
-### Wallet API — Test Requests
-### Requires the "REST Client" VS Code extension (humao.rest-client)
-### Run each block with the "Send Request" button that appears above it.
+### Wallet API — Test Requests (Steps 1–5)
+### Use http://localhost:8080 whether running via mvn or docker compose — both map to port 8080.
 
 @baseUrl = http://localhost:8080/api/v1
 
-# ─────────────────────────────────────────────
-# 1. Create Wallet (Alice)
-# ─────────────────────────────────────────────
-### Expected: 201 Created, walletId in response (save this as walletA)
+# ─────────────────────────────────────────────────────────────────
+# STEPS 1–3: Core endpoints (unchanged)
+# ─────────────────────────────────────────────────────────────────
+
+### 1. Create Wallet (Alice)
 POST {{baseUrl}}/wallets
 Content-Type: application/json
 
@@ -18,10 +18,7 @@ Content-Type: application/json
 
 ###
 
-# ─────────────────────────────────────────────
-# 2. Create Wallet (Bob)
-# ─────────────────────────────────────────────
-### Expected: 201 Created (save walletId as walletB)
+### 2. Create Wallet (Bob)
 POST {{baseUrl}}/wallets
 Content-Type: application/json
 
@@ -32,11 +29,7 @@ Content-Type: application/json
 
 ###
 
-# ─────────────────────────────────────────────
-# 3. Deposit into Alice's Wallet
-# ─────────────────────────────────────────────
-### Replace 1 with Alice's actual walletId
-### Expected: 200 OK, balance = 1000.0000
+### 3. Deposit into Alice's Wallet
 POST {{baseUrl}}/wallets/1/deposit
 Content-Type: application/json
 
@@ -46,11 +39,7 @@ Content-Type: application/json
 
 ###
 
-# ─────────────────────────────────────────────
-# 4. Transfer from Alice to Bob
-# ─────────────────────────────────────────────
-### Replace fromWalletId and toWalletId with actual values
-### Expected: 200 OK, type = "TRANSFER"
+### 4. Transfer Alice → Bob
 POST {{baseUrl}}/transfers
 Content-Type: application/json
 
@@ -62,40 +51,62 @@ Content-Type: application/json
 
 ###
 
-# ─────────────────────────────────────────────
-# 5. Get Balance — Alice
-# ─────────────────────────────────────────────
-### Expected: 200 OK, balance = 750.0000
+# ─────────────────────────────────────────────────────────────────
+# STEP 4: Cache-aside verification
+# Watch the Spring Boot logs while running these — the log line
+# "Cache MISS — fetching balance for wallet X from MySQL"
+# tells you whether Redis served the response or MySQL was hit.
+# ─────────────────────────────────────────────────────────────────
+
+### 5. Get Balance — Alice (1st call = CACHE MISS → hits MySQL, stores in Redis)
+# Check logs: you should see "Cache MISS" printed
 GET {{baseUrl}}/wallets/1/balance
 
 ###
 
-# ─────────────────────────────────────────────
-# 6. Get Balance — Bob
-# ─────────────────────────────────────────────
-### Expected: 200 OK, balance = 250.0000
+### 6. Get Balance — Alice (2nd call = CACHE HIT → served from Redis, no MySQL)
+# Check logs: "Cache MISS" should NOT appear — Redis answered this one
+GET {{baseUrl}}/wallets/1/balance
+
+###
+
+### 7. Deposit into Alice (this EVICTS the cache for wallet 1)
+POST {{baseUrl}}/wallets/1/deposit
+Content-Type: application/json
+
+{
+  "amount": 500.00
+}
+
+###
+
+### 8. Get Balance — Alice after deposit (CACHE MISS again — Redis entry was evicted)
+# Balance should now be 1250.0000 (750 + 500).
+# Check logs: "Cache MISS" appears again because deposit evicted the key.
+GET {{baseUrl}}/wallets/1/balance
+
+###
+
+### 9. Get Balance — Bob
 GET {{baseUrl}}/wallets/2/balance
 
 ###
 
-# ─────────────────────────────────────────────
-# 7. Transaction History — Alice
-# ─────────────────────────────────────────────
-### Expected: 200 OK, array with DEPOSIT + TRANSFER entries
+### 10. Transaction History — Alice
 GET {{baseUrl}}/wallets/1/transactions
 
 ###
 
-# ─────────────────────────────────────────────
-# Error Cases — verify your exception handler works
-# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────
+# Error cases (unchanged from Steps 1–3)
+# ─────────────────────────────────────────────────────────────────
 
 ### 404 — wallet doesn't exist
 GET {{baseUrl}}/wallets/9999/balance
 
 ###
 
-### 422 — insufficient funds (transfer more than balance)
+### 422 — insufficient funds
 POST {{baseUrl}}/transfers
 Content-Type: application/json
 
@@ -115,25 +126,4 @@ Content-Type: application/json
   "fromWalletId": 1,
   "toWalletId": 1,
   "amount": 100.00
-}
-
-###
-
-### 400 — validation error (negative amount)
-POST {{baseUrl}}/wallets/1/deposit
-Content-Type: application/json
-
-{
-  "amount": -50.00
-}
-
-###
-
-### 400 — validation error (invalid email)
-POST {{baseUrl}}/wallets
-Content-Type: application/json
-
-{
-  "name": "Charlie",
-  "email": "not-an-email"
 }

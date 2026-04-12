@@ -1,6 +1,6 @@
-version: '3.8'
-
 services:
+
+  # ── MySQL ─────────────────────────────────────────────────────────
   mysql:
     image: mysql:8.0
     container_name: wallet-mysql
@@ -19,6 +19,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ── Redis ─────────────────────────────────────────────────────────
+  # ✅ STEP 4: Redis added.
+  # redis:alpine is a tiny image (~30MB). No password needed for local dev.
+  redis:
+    image: redis:7-alpine
+    container_name: wallet-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Spring Boot App ───────────────────────────────────────────────
+  # ✅ STEP 5: App containerised.
+  # "build: ." tells Docker Compose to build from the Dockerfile in
+  # the current directory instead of pulling a pre-built image.
+  app:
+    build: .
+    container_name: wallet-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # These override the ${MYSQL_HOST:localhost} and ${REDIS_HOST:localhost}
+      # placeholders in application.yml. Inside Docker's network, services
+      # are reachable by their service name, not localhost.
+      MYSQL_HOST: mysql
+      REDIS_HOST: redis
+    depends_on:
+      mysql:
+        condition: service_healthy   # waits for MySQL to pass its healthcheck
+      redis:
+        condition: service_healthy   # waits for Redis to pass its healthcheck
 
 volumes:
   mysql_data:

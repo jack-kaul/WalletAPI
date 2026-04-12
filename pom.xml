@@ -50,6 +50,12 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- ✅ STEP 4: Redis — Spring Cache abstraction + Lettuce client -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
+
     <!-- Lombok (removes boilerplate: @Getter, @Builder, etc.) -->
     <dependency>
       <groupId>org.projectlombok</groupId>
